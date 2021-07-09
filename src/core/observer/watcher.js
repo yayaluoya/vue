@@ -23,6 +23,9 @@ let uid = 0
  * A watcher parses an expression, collects dependencies,
  * and fires callback when the expression value changes.
  * This is used for both the $watch() api and directives.
+ * 观察器解析表达式，收集依赖关系。注意是观察表达式或者一个函数，并收集并监听这个函数或表达式的依赖
+  *并在表达式值更改时触发回调。
+  *这用于$watch() api和指令。
  */
 export default class Watcher {
   vm: Component;
@@ -43,14 +46,15 @@ export default class Watcher {
   getter: Function;
   value: any;
 
-  constructor (
+  constructor(
     vm: Component,
-    expOrFn: string | Function,
-    cb: Function,
-    options?: ?Object,
-    isRenderWatcher?: boolean
+    expOrFn: string | Function,//用于收集依赖的表达式或者函数
+    cb: Function,//回调函数
+    options?: ?Object,//选项
+    isRenderWatcher?: boolean//是否在vm上绑定自身
   ) {
     this.vm = vm
+    //在vm上绑定自身
     if (isRenderWatcher) {
       vm._watcher = this
     }
@@ -99,7 +103,8 @@ export default class Watcher {
   /**
    * Evaluate the getter, and re-collect dependencies.
    */
-  get () {
+  get() {
+    //这里每次都要重新收集依赖，主要是依赖是会动他变化的。
     pushTarget(this)
     let value
     const vm = this.vm
@@ -118,6 +123,7 @@ export default class Watcher {
         traverse(value)
       }
       popTarget()
+      //
       this.cleanupDeps()
     }
     return value
@@ -126,7 +132,7 @@ export default class Watcher {
   /**
    * Add a dependency to this directive.
    */
-  addDep (dep: Dep) {
+  addDep(dep: Dep) {
     const id = dep.id
     if (!this.newDepIds.has(id)) {
       this.newDepIds.add(id)
@@ -139,8 +145,9 @@ export default class Watcher {
 
   /**
    * Clean up for dependency collection.
+   * 清理依赖，根据新旧依赖来清理
    */
-  cleanupDeps () {
+  cleanupDeps() {
     let i = this.deps.length
     while (i--) {
       const dep = this.deps[i]
@@ -162,7 +169,7 @@ export default class Watcher {
    * Subscriber interface.
    * Will be called when a dependency changes.
    */
-  update () {
+  update() {
     /* istanbul ignore else */
     if (this.lazy) {
       this.dirty = true
@@ -177,7 +184,7 @@ export default class Watcher {
    * Scheduler job interface.
    * Will be called by the scheduler.
    */
-  run () {
+  run() {
     if (this.active) {
       const value = this.get()
       if (
@@ -205,7 +212,7 @@ export default class Watcher {
    * Evaluate the value of the watcher.
    * This only gets called for lazy watchers.
    */
-  evaluate () {
+  evaluate() {
     this.value = this.get()
     this.dirty = false
   }
@@ -213,7 +220,7 @@ export default class Watcher {
   /**
    * Depend on all deps collected by this watcher.
    */
-  depend () {
+  depend() {
     let i = this.deps.length
     while (i--) {
       this.deps[i].depend()
@@ -223,7 +230,7 @@ export default class Watcher {
   /**
    * Remove self from all dependencies' subscriber list.
    */
-  teardown () {
+  teardown() {
     if (this.active) {
       // remove self from vm's watcher list
       // this is a somewhat expensive operation so we skip it

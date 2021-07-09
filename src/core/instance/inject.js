@@ -4,7 +4,8 @@ import { hasOwn } from 'shared/util'
 import { warn, hasSymbol } from '../util/index'
 import { defineReactive, toggleObserving } from '../observer/index'
 
-export function initProvide (vm: Component) {
+/** 初始化提供 */
+export function initProvide(vm: Component) {
   const provide = vm.$options.provide
   if (provide) {
     vm._provided = typeof provide === 'function'
@@ -13,9 +14,11 @@ export function initProvide (vm: Component) {
   }
 }
 
-export function initInjections (vm: Component) {
+/** 初始化注入 */
+export function initInjections(vm: Component) {
   const result = resolveInject(vm.$options.inject, vm)
   if (result) {
+    //停止收集依赖
     toggleObserving(false)
     Object.keys(result).forEach(key => {
       /* istanbul ignore else */
@@ -29,14 +32,17 @@ export function initInjections (vm: Component) {
           )
         })
       } else {
+        //把得到对注入对象的键值对注入到vm上，以便可以直接访问，而且是加了响应式的，注意这里的响应式没有深层次添加，这是vue刻意为之的
         defineReactive(vm, key, result[key])
       }
     })
+    //取消停止收集依赖
     toggleObserving(true)
   }
 }
 
-export function resolveInject (inject: any, vm: Component): ?Object {
+/** 从父组件中遍历出需要注入的键值对，并把它们添加到一个新的对象上，然后返回这个对象 */
+export function resolveInject(inject: any, vm: Component): ?Object {
   if (inject) {
     // inject is :any because flow is not smart enough to figure out cached
     const result = Object.create(null)

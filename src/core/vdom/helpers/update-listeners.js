@@ -33,8 +33,8 @@ const normalizeEvent = cached((name: string): {
   }
 })
 
-export function createFnInvoker (fns: Function | Array<Function>, vm: ?Component): Function {
-  function invoker () {
+export function createFnInvoker(fns: Function | Array<Function>, vm: ?Component): Function {
+  function invoker() {
     const fns = invoker.fns
     if (Array.isArray(fns)) {
       const cloned = fns.slice()
@@ -50,7 +50,7 @@ export function createFnInvoker (fns: Function | Array<Function>, vm: ?Component
   return invoker
 }
 
-export function updateListeners (
+export function updateListeners(
   on: Object,
   oldOn: Object,
   add: Function,

@@ -9,11 +9,14 @@ import {
 } from '../util/index'
 import { updateListeners } from '../vdom/helpers/index'
 
-export function initEvents (vm: Component) {
+/** 初始化事件 */
+export function initEvents(vm: Component) {
   vm._events = Object.create(null)
   vm._hasHookEvent = false
   // init parent attached events
   const listeners = vm.$options._parentListeners
+  // console.log(listeners);
+  //注意这里判断了是否存在的
   if (listeners) {
     updateComponentListeners(vm, listeners)
   }
@@ -21,17 +24,17 @@ export function initEvents (vm: Component) {
 
 let target: any
 
-function add (event, fn) {
+function add(event, fn) {
   target.$on(event, fn)
 }
 
-function remove (event, fn) {
+function remove(event, fn) {
   target.$off(event, fn)
 }
 
-function createOnceHandler (event, fn) {
+function createOnceHandler(event, fn) {
   const _target = target
-  return function onceHandler () {
+  return function onceHandler() {
     const res = fn.apply(null, arguments)
     if (res !== null) {
       _target.$off(event, onceHandler)
@@ -39,7 +42,7 @@ function createOnceHandler (event, fn) {
   }
 }
 
-export function updateComponentListeners (
+export function updateComponentListeners(
   vm: Component,
   listeners: Object,
   oldListeners: ?Object
@@ -49,7 +52,7 @@ export function updateComponentListeners (
   target = undefined
 }
 
-export function eventsMixin (Vue: Class<Component>) {
+export function eventsMixin(Vue: Class<Component>) {
   const hookRE = /^hook:/
   Vue.prototype.$on = function (event: string | Array<string>, fn: Function): Component {
     const vm: Component = this
@@ -62,6 +65,7 @@ export function eventsMixin (Vue: Class<Component>) {
       // optimize hook:event cost by using a boolean flag marked at registration
       // instead of a hash lookup
       if (hookRE.test(event)) {
+        //在执行勾子函数时会判断这个
         vm._hasHookEvent = true
       }
     }
@@ -70,7 +74,8 @@ export function eventsMixin (Vue: Class<Component>) {
 
   Vue.prototype.$once = function (event: string, fn: Function): Component {
     const vm: Component = this
-    function on () {
+    //这样写真心不错，直接包成自动删除，不用在处理什么状态了。
+    function on() {
       vm.$off(event, on)
       fn.apply(vm, arguments)
     }
@@ -104,6 +109,7 @@ export function eventsMixin (Vue: Class<Component>) {
     }
     // specific handler
     let cb
+    //TODO 为什么要用这种形式来删除方法呀。
     let i = cbs.length
     while (i--) {
       cb = cbs[i]

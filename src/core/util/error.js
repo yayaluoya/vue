@@ -6,7 +6,7 @@ import { inBrowser, inWeex } from './env'
 import { isPromise } from 'shared/util'
 import { pushTarget, popTarget } from '../observer/dep'
 
-export function handleError (err: Error, vm: any, info: string) {
+export function handleError(err: Error, vm: any, info: string) {
   // Deactivate deps tracking while processing error handler to avoid possible infinite rendering.
   // See: https://github.com/vuejs/vuex/issues/1505
   pushTarget()
@@ -33,7 +33,8 @@ export function handleError (err: Error, vm: any, info: string) {
   }
 }
 
-export function invokeWithErrorHandling (
+/** 通过错误处理调用 */
+export function invokeWithErrorHandling(
   handler: Function,
   context: any,
   args: null | any[],
@@ -55,7 +56,7 @@ export function invokeWithErrorHandling (
   return res
 }
 
-function globalHandleError (err, vm, info) {
+function globalHandleError(err, vm, info) {
   if (config.errorHandler) {
     try {
       return config.errorHandler.call(null, err, vm, info)
@@ -70,7 +71,7 @@ function globalHandleError (err, vm, info) {
   logError(err, vm, info)
 }
 
-function logError (err, vm, info) {
+function logError(err, vm, info) {
   if (process.env.NODE_ENV !== 'production') {
     warn(`Error in ${info}: "${err.toString()}"`, vm)
   }

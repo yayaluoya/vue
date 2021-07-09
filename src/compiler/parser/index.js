@@ -57,7 +57,8 @@ let platformMustUseProp
 let platformGetTagNamespace
 let maybeComponent
 
-export function createASTElement (
+/** 创建ast对象 */
+export function createASTElement(
   tag: string,
   attrs: Array<ASTAttr>,
   parent: ASTElement | void
@@ -75,8 +76,9 @@ export function createASTElement (
 
 /**
  * Convert HTML string to AST.
+ * 将html字符串转成ast（抽象语法数）
  */
-export function parse (
+export function parse(
   template: string,
   options: CompilerOptions
 ): ASTElement | void {
@@ -85,41 +87,50 @@ export function parse (
   platformIsPreTag = options.isPreTag || no
   platformMustUseProp = options.mustUseProp || no
   platformGetTagNamespace = options.getTagNamespace || no
+  //判断是否是保留标签的方法
   const isReservedTag = options.isReservedTag || no
+  //判断是否是组件的方法
   maybeComponent = (el: ASTElement) => !!(
     el.component ||
     el.attrsMap[':is'] ||
     el.attrsMap['v-bind:is'] ||
     !(el.attrsMap.is ? isReservedTag(el.attrsMap.is) : isReservedTag(el.tag))
   )
+  //提取模块功能
   transforms = pluckModuleFunction(options.modules, 'transformNode')
   preTransforms = pluckModuleFunction(options.modules, 'preTransformNode')
   postTransforms = pluckModuleFunction(options.modules, 'postTransformNode')
 
+  //分隔符
   delimiters = options.delimiters
 
+  //中间结果
   const stack = []
   const preserveWhitespace = options.preserveWhitespace !== false
   const whitespaceOption = options.whitespace
+  //最终结果
   let root
+  //记录父元素
   let currentParent
   let inVPre = false
   let inPre = false
   let warned = false
 
-  function warnOnce (msg, range) {
+  /** 警告一次 */
+  function warnOnce(msg, range) {
     if (!warned) {
       warned = true
       warn(msg, range)
     }
   }
 
-  function closeElement (element) {
+  /** 关闭元素 */
+  function closeElement(element) {
     trimEndingWhitespace(element)
     if (!inVPre && !element.processed) {
       element = processElement(element, options)
     }
-    // tree management
+    // tree management tree管理
     if (!stack.length && element !== root) {
       // allow root elements with v-if, v-else-if and v-else
       if (root.if && (element.elseif || element.else)) {
@@ -139,6 +150,7 @@ export function parse (
         )
       }
     }
+    //是否有父元素以及是否被禁止
     if (currentParent && !element.forbidden) {
       if (element.elseif || element.else) {
         processIfConditions(element, currentParent)
@@ -148,9 +160,11 @@ export function parse (
           // keep it in the children list so that v-else(-if) conditions can
           // find it as the prev node.
           const name = element.slotTarget || '"default"'
-          ;(currentParent.scopedSlots || (currentParent.scopedSlots = {}))[name] = element
+            ; (currentParent.scopedSlots || (currentParent.scopedSlots = {}))[name] = element
         }
+        //把它添加进父元素中
         currentParent.children.push(element)
+        //并且指定父元素
         element.parent = currentParent
       }
     }
@@ -174,7 +188,8 @@ export function parse (
     }
   }
 
-  function trimEndingWhitespace (el) {
+  /** 修剪结束空白 */
+  function trimEndingWhitespace(el) {
     // remove trailing whitespace node
     if (!inPre) {
       let lastNode
@@ -188,7 +203,8 @@ export function parse (
     }
   }
 
-  function checkRootConstraints (el) {
+  /** 检查根约束 */
+  function checkRootConstraints(el) {
     if (el.tag === 'slot' || el.tag === 'template') {
       warnOnce(
         `Cannot use <${el.tag}> as component root element because it may ` +
@@ -205,6 +221,7 @@ export function parse (
     }
   }
 
+  /** 解析html字符串 */
   parseHTML(template, {
     warn,
     expectHTML: options.expectHTML,
@@ -214,9 +231,19 @@ export function parse (
     shouldDecodeNewlinesForHref: options.shouldDecodeNewlinesForHref,
     shouldKeepComment: options.comments,
     outputSourceRange: options.outputSourceRange,
-    start (tag, attrs, unary, start, end) {
+
+    /**
+     * 处理开始标签的回调
+     * @param {*} tag 标签名字
+     * @param {*} attrs 属性列表
+     * @param {*} unary 是否是一元标签
+     * @param {*} start 开始位置
+     * @param {*} end 结束位置
+     */
+    start(tag, attrs, unary, start, end) {
       // check namespace.
       // inherit parent ns if there is one
+      //检查命名空间
       const ns = (currentParent && currentParent.ns) || platformGetTagNamespace(tag)
 
       // handle IE svg bug
@@ -225,7 +252,9 @@ export function parse (
         attrs = guardIESVGBug(attrs)
       }
 
+      //创建一个ast元素
       let element: ASTElement = createASTElement(tag, attrs, currentParent)
+      //如果有命名空间就加上命名空间
       if (ns) {
         element.ns = ns
       }
@@ -253,6 +282,7 @@ export function parse (
         })
       }
 
+      //判断是否是禁止的标签，和是否是服务端渲染
       if (isForbiddenTag(element) && !isServerRendering()) {
         element.forbidden = true
         process.env.NODE_ENV !== 'production' && warn(
@@ -278,14 +308,17 @@ export function parse (
         inPre = true
       }
       if (inVPre) {
+        //处理原始属性
         processRawAttrs(element)
       } else if (!element.processed) {
         // structural directives
+        //处理结构指令
         processFor(element)
         processIf(element)
         processOnce(element)
       }
 
+      //如果没有root元素的话，则当前元素为根元素
       if (!root) {
         root = element
         if (process.env.NODE_ENV !== 'production') {
@@ -293,26 +326,45 @@ export function parse (
         }
       }
 
+      //如果不是一元标签的话
       if (!unary) {
+        //把当前元素记录为父元素
         currentParent = element
+        //添加到队列中
         stack.push(element)
       } else {
+        //如果是一元标签的话直接关闭掉了
         closeElement(element)
       }
     },
 
-    end (tag, start, end) {
+    /**
+     * 结束标签回调
+     * @param {*} tag 标签名
+     * @param {*} start 开始索引
+     * @param {*} end 结束索引
+     */
+    end(tag, start, end) {
       const element = stack[stack.length - 1]
-      // pop stack
+      // pop stack 从队列中弹出去，默认上一项为父元素
       stack.length -= 1
       currentParent = stack[stack.length - 1]
       if (process.env.NODE_ENV !== 'production' && options.outputSourceRange) {
         element.end = end
       }
+      //关闭标签
       closeElement(element)
     },
 
-    chars (text: string, start: number, end: number) {
+    /**
+     * 处理普通字符串
+     * @param {*} text 字符串内容
+     * @param {*} start 开始索引
+     * @param {*} end 结束索引
+     * @returns 
+     */
+    chars(text: string, start: number, end: number) {
+      //如果不存在父元素的话直接抛出警告，因为字符串必须是某个元素的子元素
       if (!currentParent) {
         if (process.env.NODE_ENV !== 'production') {
           if (text === template) {
@@ -383,7 +435,14 @@ export function parse (
         }
       }
     },
-    comment (text: string, start, end) {
+
+    /**
+     * 评论
+     * @param {*} text 消息内容
+     * @param {*} start 开始索引
+     * @param {*} end 结束索引
+     */
+    comment(text: string, start, end) {
       // adding anything as a sibling to the root node is forbidden
       // comments should still be allowed, but ignored
       if (currentParent) {
@@ -400,16 +459,20 @@ export function parse (
       }
     }
   })
+
+  //返回最终的ast语法树对象
   return root
 }
 
-function processPre (el) {
+/** 预加工 */
+function processPre(el) {
+  //移除属性数组中的v-pre属性
   if (getAndRemoveAttr(el, 'v-pre') != null) {
     el.pre = true
   }
 }
 
-function processRawAttrs (el) {
+function processRawAttrs(el) {
   const list = el.attrsList
   const len = list.length
   if (len) {
@@ -430,7 +493,7 @@ function processRawAttrs (el) {
   }
 }
 
-export function processElement (
+export function processElement(
   element: ASTElement,
   options: CompilerOptions
 ) {
@@ -455,7 +518,7 @@ export function processElement (
   return element
 }
 
-function processKey (el) {
+function processKey(el) {
   const exp = getBindingAttr(el, 'key')
   if (exp) {
     if (process.env.NODE_ENV !== 'production') {
@@ -482,7 +545,7 @@ function processKey (el) {
   }
 }
 
-function processRef (el) {
+function processRef(el) {
   const ref = getBindingAttr(el, 'ref')
   if (ref) {
     el.ref = ref
@@ -490,7 +553,7 @@ function processRef (el) {
   }
 }
 
-export function processFor (el: ASTElement) {
+export function processFor(el: ASTElement) {
   let exp
   if ((exp = getAndRemoveAttr(el, 'v-for'))) {
     const res = parseFor(exp)
@@ -512,7 +575,7 @@ type ForParseResult = {
   iterator2?: string;
 };
 
-export function parseFor (exp: string): ?ForParseResult {
+export function parseFor(exp: string): ?ForParseResult {
   const inMatch = exp.match(forAliasRE)
   if (!inMatch) return
   const res = {}
@@ -531,7 +594,7 @@ export function parseFor (exp: string): ?ForParseResult {
   return res
 }
 
-function processIf (el) {
+function processIf(el) {
   const exp = getAndRemoveAttr(el, 'v-if')
   if (exp) {
     el.if = exp
@@ -550,7 +613,7 @@ function processIf (el) {
   }
 }
 
-function processIfConditions (el, parent) {
+function processIfConditions(el, parent) {
   const prev = findPrevElement(parent.children)
   if (prev && prev.if) {
     addIfCondition(prev, {
@@ -566,7 +629,7 @@ function processIfConditions (el, parent) {
   }
 }
 
-function findPrevElement (children: Array<any>): ASTElement | void {
+function findPrevElement(children: Array<any>): ASTElement | void {
   let i = children.length
   while (i--) {
     if (children[i].type === 1) {
@@ -584,14 +647,14 @@ function findPrevElement (children: Array<any>): ASTElement | void {
   }
 }
 
-export function addIfCondition (el: ASTElement, condition: ASTIfCondition) {
+export function addIfCondition(el: ASTElement, condition: ASTIfCondition) {
   if (!el.ifConditions) {
     el.ifConditions = []
   }
   el.ifConditions.push(condition)
 }
 
-function processOnce (el) {
+function processOnce(el) {
   const once = getAndRemoveAttr(el, 'v-once')
   if (once != null) {
     el.once = true
@@ -600,7 +663,7 @@ function processOnce (el) {
 
 // handle content being passed to a component as slot,
 // e.g. <template slot="xxx">, <div slot-scope="xxx">
-function processSlotContent (el) {
+function processSlotContent(el) {
   let slotScope
   if (el.tag === 'template') {
     slotScope = getAndRemoveAttr(el, 'scope')
@@ -715,7 +778,7 @@ function processSlotContent (el) {
   }
 }
 
-function getSlotName (binding) {
+function getSlotName(binding) {
   let name = binding.name.replace(slotRE, '')
   if (!name) {
     if (binding.name[0] !== '#') {
@@ -735,7 +798,7 @@ function getSlotName (binding) {
 }
 
 // handle <slot/> outlets
-function processSlotOutlet (el) {
+function processSlotOutlet(el) {
   if (el.tag === 'slot') {
     el.slotName = getBindingAttr(el, 'name')
     if (process.env.NODE_ENV !== 'production' && el.key) {
@@ -749,7 +812,7 @@ function processSlotOutlet (el) {
   }
 }
 
-function processComponent (el) {
+function processComponent(el) {
   let binding
   if ((binding = getBindingAttr(el, 'is'))) {
     el.component = binding
@@ -759,7 +822,7 @@ function processComponent (el) {
   }
 }
 
-function processAttrs (el) {
+function processAttrs(el) {
   const list = el.attrsList
   let i, l, name, rawName, value, modifiers, syncGen, isDynamic
   for (i = 0, l = list.length; i < l; i++) {
@@ -888,15 +951,15 @@ function processAttrs (el) {
       // #6887 firefox doesn't update muted state if set via attribute
       // even immediately after element creation
       if (!el.component &&
-          name === 'muted' &&
-          platformMustUseProp(el.tag, el.attrsMap.type, name)) {
+        name === 'muted' &&
+        platformMustUseProp(el.tag, el.attrsMap.type, name)) {
         addProp(el, name, 'true', list[i])
       }
     }
   }
 }
 
-function checkInFor (el: ASTElement): boolean {
+function checkInFor(el: ASTElement): boolean {
   let parent = el
   while (parent) {
     if (parent.for !== undefined) {
@@ -907,7 +970,7 @@ function checkInFor (el: ASTElement): boolean {
   return false
 }
 
-function parseModifiers (name: string): Object | void {
+function parseModifiers(name: string): Object | void {
   const match = name.match(modifierRE)
   if (match) {
     const ret = {}
@@ -916,7 +979,7 @@ function parseModifiers (name: string): Object | void {
   }
 }
 
-function makeAttrsMap (attrs: Array<Object>): Object {
+function makeAttrsMap(attrs: Array<Object>): Object {
   const map = {}
   for (let i = 0, l = attrs.length; i < l; i++) {
     if (
@@ -931,11 +994,12 @@ function makeAttrsMap (attrs: Array<Object>): Object {
 }
 
 // for script (e.g. type="x/template") or style, do not decode content
-function isTextTag (el): boolean {
+function isTextTag(el): boolean {
   return el.tag === 'script' || el.tag === 'style'
 }
 
-function isForbiddenTag (el): boolean {
+/** 判断是否是被禁止的标签 */
+function isForbiddenTag(el): boolean {
   return (
     el.tag === 'style' ||
     (el.tag === 'script' && (
@@ -949,7 +1013,7 @@ const ieNSBug = /^xmlns:NS\d+/
 const ieNSPrefix = /^NS\d+:/
 
 /* istanbul ignore next */
-function guardIESVGBug (attrs) {
+function guardIESVGBug(attrs) {
   const res = []
   for (let i = 0; i < attrs.length; i++) {
     const attr = attrs[i]
@@ -961,7 +1025,7 @@ function guardIESVGBug (attrs) {
   return res
 }
 
-function checkForAliasModel (el, value) {
+function checkForAliasModel(el, value) {
   let _el = el
   while (_el) {
     if (_el.for && _el.alias === value) {

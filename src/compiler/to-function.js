@@ -9,7 +9,7 @@ type CompiledFunctionResult = {
   staticRenderFns: Array<Function>;
 };
 
-function createFunction (code, errors) {
+function createFunction(code, errors) {
   try {
     return new Function(code)
   } catch (err) {
@@ -18,13 +18,15 @@ function createFunction (code, errors) {
   }
 }
 
-export function createCompileToFunctionFn (compile: Function): Function {
+/** 创建编译成方法的方法的方法 */
+export function createCompileToFunctionFn(compile: Function): Function {
   const cache = Object.create(null)
 
-  return function compileToFunctions (
-    template: string,
-    options?: CompilerOptions,
-    vm?: Component
+  /** 编译成方法 */
+  return function compileToFunctions(
+    template: string,//真正的编译函数
+    options?: CompilerOptions,//选项
+    vm?: Component//vm对象
   ): CompiledFunctionResult {
     options = extend({}, options)
     const warn = options.warn || baseWarn
@@ -90,6 +92,7 @@ export function createCompileToFunctionFn (compile: Function): Function {
     // turn code into functions
     const res = {}
     const fnGenErrors = []
+    // console.log(compiled);
     res.render = createFunction(compiled.render, fnGenErrors)
     res.staticRenderFns = compiled.staticRenderFns.map(code => {
       return createFunction(code, fnGenErrors)
