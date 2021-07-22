@@ -23,13 +23,22 @@ import {
   createASTElement
 } from 'compiler/parser/index'
 
-function preTransformNode (el: ASTElement, options: CompilerOptions) {
+/**
+ * 预处理变换节点
+ * @param {*} el 目标节点
+ * @param {*} options 选项
+ * @returns 
+ */
+function preTransformNode(el: ASTElement, options: CompilerOptions) {
+  //只处理input节点
   if (el.tag === 'input') {
     const map = el.attrsMap
+    //判断又没有v-model属性
     if (!map['v-model']) {
       return
     }
 
+    //获取type的内容
     let typeBinding
     if (map[':type'] || map['v-bind:type']) {
       typeBinding = getBindingAttr(el, 'type')
@@ -38,6 +47,7 @@ function preTransformNode (el: ASTElement, options: CompilerOptions) {
       typeBinding = `(${map['v-bind']}).type`
     }
 
+    //根据type的内容做不同的操作
     if (typeBinding) {
       const ifCondition = getAndRemoveAttr(el, 'v-if', true)
       const ifConditionExtra = ifCondition ? `&&(${ifCondition})` : ``

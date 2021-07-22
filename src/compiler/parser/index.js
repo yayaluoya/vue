@@ -64,13 +64,14 @@ export function createASTElement(
   parent: ASTElement | void
 ): ASTElement {
   return {
-    type: 1,
-    tag,
-    attrsList: attrs,
-    attrsMap: makeAttrsMap(attrs),
+    type: 1,//类型
+    tag,//标签名字
+    attrsList: attrs,//属性数组
+    attrsMap: makeAttrsMap(attrs),//属性对象
     rawAttrsMap: {},
-    parent,
-    children: []
+    parent,//父ast对象
+    children: []//子ast对象
+    /** 后期还会加很多新东西，以上的只是必须有的东西而已 */
   }
 }
 
@@ -221,7 +222,10 @@ export function parse(
     }
   }
 
-  /** 解析html字符串 */
+  /** 
+   * 解析html字符串
+   * 并把一些当前闭包中的属性和方法传过去
+   */
   parseHTML(template, {
     warn,
     expectHTML: options.expectHTML,
@@ -294,6 +298,7 @@ export function parse(
       }
 
       // apply pre-transforms
+      //应用预变换
       for (let i = 0; i < preTransforms.length; i++) {
         element = preTransforms[i](element, options) || element
       }
@@ -464,7 +469,7 @@ export function parse(
   return root
 }
 
-/** 预加工 */
+/** 预处理 */
 function processPre(el) {
   //移除属性数组中的v-pre属性
   if (getAndRemoveAttr(el, 'v-pre') != null) {
@@ -472,6 +477,7 @@ function processPre(el) {
   }
 }
 
+/** 处理原始属性 */
 function processRawAttrs(el) {
   const list = el.attrsList
   const len = list.length
@@ -493,6 +499,7 @@ function processRawAttrs(el) {
   }
 }
 
+/** 处理ast对象 */
 export function processElement(
   element: ASTElement,
   options: CompilerOptions
@@ -545,6 +552,7 @@ function processKey(el) {
   }
 }
 
+/** 处理ref */
 function processRef(el) {
   const ref = getBindingAttr(el, 'ref')
   if (ref) {
@@ -553,6 +561,7 @@ function processRef(el) {
   }
 }
 
+/** 处理for循环 */
 export function processFor(el: ASTElement) {
   let exp
   if ((exp = getAndRemoveAttr(el, 'v-for'))) {
@@ -575,6 +584,7 @@ type ForParseResult = {
   iterator2?: string;
 };
 
+/** 解析for循环 */
 export function parseFor(exp: string): ?ForParseResult {
   const inMatch = exp.match(forAliasRE)
   if (!inMatch) return
@@ -594,6 +604,7 @@ export function parseFor(exp: string): ?ForParseResult {
   return res
 }
 
+/** 处理if */
 function processIf(el) {
   const exp = getAndRemoveAttr(el, 'v-if')
   if (exp) {
@@ -613,6 +624,7 @@ function processIf(el) {
   }
 }
 
+/** 处理If条件 */
 function processIfConditions(el, parent) {
   const prev = findPrevElement(parent.children)
   if (prev && prev.if) {
@@ -629,6 +641,7 @@ function processIfConditions(el, parent) {
   }
 }
 
+/** 查找上一个元素 */
 function findPrevElement(children: Array<any>): ASTElement | void {
   let i = children.length
   while (i--) {
@@ -647,6 +660,7 @@ function findPrevElement(children: Array<any>): ASTElement | void {
   }
 }
 
+/** 添加if条件 */
 export function addIfCondition(el: ASTElement, condition: ASTIfCondition) {
   if (!el.ifConditions) {
     el.ifConditions = []
@@ -654,6 +668,7 @@ export function addIfCondition(el: ASTElement, condition: ASTIfCondition) {
   el.ifConditions.push(condition)
 }
 
+/** 处理 once */
 function processOnce(el) {
   const once = getAndRemoveAttr(el, 'v-once')
   if (once != null) {
@@ -663,6 +678,7 @@ function processOnce(el) {
 
 // handle content being passed to a component as slot,
 // e.g. <template slot="xxx">, <div slot-scope="xxx">
+/** 处理插槽内容 */
 function processSlotContent(el) {
   let slotScope
   if (el.tag === 'template') {
@@ -778,6 +794,7 @@ function processSlotContent(el) {
   }
 }
 
+/** 获取插槽名字 */
 function getSlotName(binding) {
   let name = binding.name.replace(slotRE, '')
   if (!name) {
@@ -798,6 +815,7 @@ function getSlotName(binding) {
 }
 
 // handle <slot/> outlets
+/** 处理插槽出口 */
 function processSlotOutlet(el) {
   if (el.tag === 'slot') {
     el.slotName = getBindingAttr(el, 'name')
@@ -812,6 +830,7 @@ function processSlotOutlet(el) {
   }
 }
 
+/** 处理组件 */
 function processComponent(el) {
   let binding
   if ((binding = getBindingAttr(el, 'is'))) {
@@ -822,6 +841,7 @@ function processComponent(el) {
   }
 }
 
+/** 处理属性，因为动态绑定的属性在处理完成后都被删了的，所以剩下的都是些静态的或者特殊的属性 */
 function processAttrs(el) {
   const list = el.attrsList
   let i, l, name, rawName, value, modifiers, syncGen, isDynamic
@@ -959,6 +979,7 @@ function processAttrs(el) {
   }
 }
 
+/** 检查for循环 */
 function checkInFor(el: ASTElement): boolean {
   let parent = el
   while (parent) {
@@ -970,6 +991,7 @@ function checkInFor(el: ASTElement): boolean {
   return false
 }
 
+/** 解析修饰符 */
 function parseModifiers(name: string): Object | void {
   const match = name.match(modifierRE)
   if (match) {
@@ -979,6 +1001,7 @@ function parseModifiers(name: string): Object | void {
   }
 }
 
+/** 根据属性数组创建属性map对象 */
 function makeAttrsMap(attrs: Array<Object>): Object {
   const map = {}
   for (let i = 0, l = attrs.length; i < l; i++) {
@@ -994,6 +1017,7 @@ function makeAttrsMap(attrs: Array<Object>): Object {
 }
 
 // for script (e.g. type="x/template") or style, do not decode content
+/** 于脚本(例如type="x/template ")或样式，不要解码内容 */
 function isTextTag(el): boolean {
   return el.tag === 'script' || el.tag === 'style'
 }
@@ -1013,6 +1037,7 @@ const ieNSBug = /^xmlns:NS\d+/
 const ieNSPrefix = /^NS\d+:/
 
 /* istanbul ignore next */
+/** 忽略下一个 */
 function guardIESVGBug(attrs) {
   const res = []
   for (let i = 0; i < attrs.length; i++) {
@@ -1025,6 +1050,7 @@ function guardIESVGBug(attrs) {
   return res
 }
 
+/** 检查别名模型 */
 function checkForAliasModel(el, value) {
   let _el = el
   while (_el) {

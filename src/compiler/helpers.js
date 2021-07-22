@@ -11,6 +11,12 @@ export function baseWarn (msg: string, range?: Range) {
 }
 /* eslint-enable no-unused-vars */
 
+/**
+ * 提取模块列表的某个指定方法
+ * @param {*} modules 模块列表
+ * @param {*} key 方法key
+ * @returns 
+ */
 export function pluckModuleFunction<F: Function> (
   modules: ?Array<Object>,
   key: string
@@ -20,11 +26,13 @@ export function pluckModuleFunction<F: Function> (
     : []
 }
 
+/** 添加prop */
 export function addProp (el: ASTElement, name: string, value: string, range?: Range, dynamic?: boolean) {
   (el.props || (el.props = [])).push(rangeSetItem({ name, value, dynamic }, range))
   el.plain = false
 }
 
+/** 添加属性 */
 export function addAttr (el: ASTElement, name: string, value: any, range?: Range, dynamic?: boolean) {
   const attrs = dynamic
     ? (el.dynamicAttrs || (el.dynamicAttrs = []))
@@ -34,11 +42,13 @@ export function addAttr (el: ASTElement, name: string, value: any, range?: Range
 }
 
 // add a raw attr (use this in preTransforms)
+/** 添加原始属性 */
 export function addRawAttr (el: ASTElement, name: string, value: any, range?: Range) {
   el.attrsMap[name] = value
   el.attrsList.push(rangeSetItem({ name, value }, range))
 }
 
+/** 添加描述符 */
 export function addDirective (
   el: ASTElement,
   name: string,
@@ -60,12 +70,14 @@ export function addDirective (
   el.plain = false
 }
 
+/** 前置修改器标记 */
 function prependModifierMarker (symbol: string, name: string, dynamic?: boolean): string {
   return dynamic
     ? `_p(${name},"${symbol}")`
     : symbol + name // mark the event as captured
 }
 
+/** 添加头 */
 export function addHandler (
   el: ASTElement,
   name: string,
@@ -158,6 +170,13 @@ export function getRawBindingAttr (
     el.rawAttrsMap[name]
 }
 
+/**
+ * 获取绑定的属性名字，动态绑定的
+ * @param {*} el 元素
+ * @param {*} name 属性名字
+ * @param {*} getStatic 
+ * @returns 
+ */
 export function getBindingAttr (
   el: ASTElement,
   name: string,
@@ -180,7 +199,13 @@ export function getBindingAttr (
 // doesn't get processed by processAttrs.
 // By default it does NOT remove it from the map (attrsMap) because the map is
 // needed during codegen.
-/** 从属性数组中移除某个属性 */
+/**
+ * 根据属性名字获取并删除某个ast对象的属性
+ * @param {*} el ast对象
+ * @param {*} name 属性名字
+ * @param {*} removeFromMap 是否从map中删除 
+ * @returns 
+ */
 export function getAndRemoveAttr (
   el: ASTElement,
   name: string,
@@ -202,6 +227,13 @@ export function getAndRemoveAttr (
   return val
 }
 
+
+/**
+ * 根据正则表达式匹配获取并删除某个ast对象的属性
+ * @param {*} el ast对象
+ * @param {*} name 属性名字匹配正则
+ * @returns 
+ */
 export function getAndRemoveAttrByRegex (
   el: ASTElement,
   name: RegExp
@@ -216,6 +248,12 @@ export function getAndRemoveAttrByRegex (
   }
 }
 
+/**
+ * 设置范围
+ * @param {*} item 项目
+ * @param {*} range 范围
+ * @returns 
+ */
 function rangeSetItem (
   item: any,
   range?: { start?: number, end?: number }

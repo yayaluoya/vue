@@ -14,9 +14,9 @@ import { isNonPhrasingTag } from 'web/compiler/util'
 import { unicodeRegExp } from 'core/util/lang'
 
 // Regular Expressions for parsing tags and attributes//解析标签和属性的正则表达式
-/** 静态属性就是它和下面的动态属性匹配的正则匹配的结果是当成同等类型的，也就是说他们的分组是一样的 */
+/** 静态属性（包括v-bind，@，:，#这些保留符）就是它和下面的动态属性匹配的正则匹配的结果是当成同等类型的，也就是说他们的分组是一样的 */
 const attribute = /^\s*([^\s"'<>\/=]+)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s"'=<>`]+)))?/
-/** 动态参数属性，比如所指令v-.*|:|@|# */
+/** 动态参数属性，比如所指令v-.*|:|@|# 然后后面根[某个变量或者字符串，表示这个是动态的] */
 const dynamicArgAttribute = /^\s*((?:v-[\w-]+:|@|:|#)\[[^=]+?\][^\s"'<>\/=]*)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s"'=<>`]+)))?/ //注意(?:v-[\w-]+:|@|:|#)是取消分组捕获的，目的是和上一个正则保持同样的分组
 /** 标签命，首字符不能是连字符- */
 const ncname = `[a-zA-Z_][\\-\\.0-9_a-zA-Z${unicodeRegExp.source}]*`//unicodeRegExp.source是一个可以匹配特殊字符的正则的源
@@ -66,6 +66,9 @@ function decodeAttr(value, shouldDecodeNewlines) {
 
 /**
  * 一步一步的消耗掉整个字符串，然后通过选项里面的工具函数把结果传回去，相当于这个函数就是个外包函数
+ * 解析出html字符串的表情和属性列表
+ * 想要理解这个方法就必须深刻理解闭包，这样才能理解到它的外包性质
+ * 注意这个方法只是解析，并不做任何处理
  * @param {*} html 源html字符串
  * @param {*} options 选项
  */
@@ -78,7 +81,8 @@ export function parseHTML(html, options) {
   let last, lastTag
   while (html) {
     last = html
-    // Make sure we're not in a plaintext content element like script/style//确保我们不在像脚本/样式这样的明文内容元素中
+    // Make sure we're not in a plaintext content element like script/style
+    //确保我们不在像脚本/样式这样的明文内容元素中
     if (!lastTag || !isPlainTextElement(lastTag)) {
       let textEnd = html.indexOf('<')
       //说明首字符是<
@@ -225,11 +229,11 @@ export function parseHTML(html, options) {
     html = html.substring(n)
   }
 
-  /** 解析遇到的开始标签 */
+  /** 解析开始标签 */
   function parseStartTag() {
     //匹配的是一个 <tagname-tagname 格式的
     const start = html.match(startTagOpen)
-    //判断是否存在
+    //判断是否存在，不存在直接返回undefined
     if (start) {
       //定义一个match对象，也就是匹配对象
       const match = {
@@ -237,13 +241,15 @@ export function parseHTML(html, options) {
         attrs: [],//属性列表
         start: index//开始索引
       }
-      //剪切掉
+      //剪切掉开始匹配的开始标签，注意是从匹配的结果0的长度开始，这个结果是正则匹配的全部结果，1是第一个分组的结果
       advance(start[0].length)
       //
       let end, attr//end就是   >的结果
       //这个时候标签前面的包含标签名的字符串已经剪切掉了，dynamicArgAttribute匹配动态属性，attribute匹配静态属性，所以attr就等于属性匹配结果了，注意包括分组哦
       while (!(end = html.match(startTagClose)) && (attr = html.match(dynamicArgAttribute) || html.match(attribute))) {
+        //这个attr就是匹配的属性对象
         attr.start = index
+        //剪切掉这个属性的整个表达字符串
         advance(attr[0].length)
         attr.end = index
         //添加到匹配对象里面，注意这个attr是包含分组的
@@ -254,6 +260,7 @@ export function parseHTML(html, options) {
       if (end) {
         // console.log(end);
         match.unarySlash = end[1]//这里是判断是否在>符号前匹配到了/，如果是则这个标签是个自闭合标签
+        //剪切掉结尾的闭合标签，到这里这个标签的开头部分全被删了，只剩下内容和结尾了
         advance(end[0].length)
         match.end = index
         //返回匹配结果
@@ -321,7 +328,7 @@ export function parseHTML(html, options) {
   }
 
   /**
-   * 处理结束标签
+   * 解析结束标签
    * @param {*} tagName 标签名字
    * @param {*} start 开始索引
    * @param {*} end 结束索引

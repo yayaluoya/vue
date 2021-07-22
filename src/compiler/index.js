@@ -13,7 +13,7 @@ export const createCompiler = createCompilerCreator(function baseCompile(
   template: string,
   options: CompilerOptions
 ): CompiledResult {
-  //解析ast
+  //解析ast，就相当于是一个描述template行为的对象
   const ast = parse(template.trim(), options)
   //优化ast
   if (options.optimize !== false) {

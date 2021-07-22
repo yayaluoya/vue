@@ -353,6 +353,7 @@ export function callHook(vm: Component, hook: string) {
     }
   }
   //这里判断是否绑定了hook相关的事件，如果绑定了的话触发相关事件，可以用来在组件外部注册生命周期函数
+  //也可以在组件生命周期期间注入生命周期回调，比如说，this.$on('hook:created');
   if (vm._hasHookEvent) {
     vm.$emit('hook:' + hook)
   }
