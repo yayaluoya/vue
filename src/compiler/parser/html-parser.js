@@ -78,7 +78,8 @@ export function parseHTML(html, options) {
   const isUnaryTag = options.isUnaryTag || no
   const canBeLeftOpenTag = options.canBeLeftOpenTag || no
   let index = 0
-  let last, lastTag
+  let last, //最后的html模板
+    lastTag //最后的标签，也就是当前记录的标签
   while (html) {
     last = html
     // Make sure we're not in a plaintext content element like script/style
@@ -123,8 +124,9 @@ export function parseHTML(html, options) {
         const endTagMatch = html.match(endTag)
         if (endTagMatch) {
           const curIndex = index
+          //剪切掉这个结束标签的全部表达内容
           advance(endTagMatch[0].length)
-          //处理借宿标签
+          //处理结束标签
           parseEndTag(endTagMatch[1], curIndex, index)
           continue
         }
@@ -157,15 +159,19 @@ export function parseHTML(html, options) {
           !conditionalComment.test(rest)
         ) {
           // < in plain text, be forgiving and treat it as text
+          //找到下一个<符号
           next = rest.indexOf('<', 1)
+          //如果没有直接退出
           if (next < 0) break
+          //如果有的话就在循环检测，注意这里是累加，便于后续在源字符串上操作
           textEnd += next
+          //
           rest = html.slice(textEnd)
         }
-        //获取<标签之前的内容
+        //获取<标签之前的内容，这个字符串就是介于正式标签里面的文本内容了
         text = html.substring(0, textEnd)
       }
-
+      //如果找不到结束标签，说明后面的内容全部都是文本内容
       if (textEnd < 0) {
         text = html
       }
@@ -274,10 +280,20 @@ export function parseHTML(html, options) {
    * @param {*} match 开始标签匹配结果
    */
   function handleStartTag(match) {
+    /**
+     * 这里的match结构为
+     * {
+        tagName
+        attrs
+        start
+        unarySlash
+     * }
+     */
+
     const tagName = match.tagName//标签名
     const unarySlash = match.unarySlash//这个值如果存在则是个自闭合标签
 
-    //期望html
+    //
     if (expectHTML) {
       if (lastTag === 'p' && isNonPhrasingTag(tagName)) {
         parseEndTag(lastTag)
@@ -295,14 +311,14 @@ export function parseHTML(html, options) {
     const attrs = new Array(l)//提取属性到这个列表中
     for (let i = 0; i < l; i++) {
       const args = match.attrs[i]
-      //获取值，这个个分组中的一个
+      //获取值，几个分组中的一个
       const value = args[3] || args[4] || args[5] || ''
-      //
+      //是否应该解码新行
       const shouldDecodeNewlines = tagName === 'a' && args[1] === 'href'
         ? options.shouldDecodeNewlinesForHref
         : options.shouldDecodeNewlines
-      //根据属性匹配结果，重新处理属性结果
       // console.log(args[1], value, shouldDecodeNewlines);
+      //根据属性匹配结果，重新处理属性结果
       attrs[i] = {
         name: args[1],//属性名字
         value: decodeAttr(value, shouldDecodeNewlines)//对属性解码，就是把特殊字符转换回来，shouldDecodeNewlines值得作用是用来判断特殊字符都是些什么
@@ -315,7 +331,15 @@ export function parseHTML(html, options) {
 
     if (!unary) {
       //添加到队列当中，注意这里是添加的一个新创建的对象
-      stack.push({ tag: tagName, lowerCasedTag: tagName.toLowerCase(), attrs: attrs, start: match.start, end: match.end })
+      stack.push(
+        {
+          tag: tagName,//直接存标签名字
+          lowerCasedTag: tagName.toLowerCase(), //存转小写后的标签名字
+          attrs: attrs,
+          start: match.start,
+          end: match.end
+        }
+      )
       //记录当前的标签名字
       lastTag = tagName
     }
@@ -342,6 +366,7 @@ export function parseHTML(html, options) {
     //找到最近相同类型的打开标签
     if (tagName) {
       lowerCasedTagName = tagName.toLowerCase()
+      //遍历队列中的标签数据，从尾部开始遍历，直到找到同名的标签为止
       for (pos = stack.length - 1; pos >= 0; pos--) {
         if (stack[pos].lowerCasedTag === lowerCasedTagName) {
           break
@@ -372,7 +397,7 @@ export function parseHTML(html, options) {
       }
 
       // Remove the open elements from the stack
-      //删除掉已经关闭了的标签
+      //删除掉已经关闭了的标签，直接把数组长度设置为当前结束标签对应的开始标签的位置，这样顺便把这个开始标签也一起删了。
       stack.length = pos
       //重置记录标签为当前堆栈中的最后一个也就是最新添加进去的那个标签
       lastTag = pos && stack[pos - 1].tag

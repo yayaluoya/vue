@@ -14,6 +14,7 @@ const idToTemplate = cached(id => {
   return el && el.innerHTML
 })
 
+/** 重新对mount方法进行了包装，这次会包含把模板编译成render函数的编译器 */
 const mount = Vue.prototype.$mount
 Vue.prototype.$mount = function (
   el?: string | Element,
@@ -31,7 +32,11 @@ Vue.prototype.$mount = function (
 
   const options = this.$options
   // resolve template/el and convert to render function
-  //如果不存在render函数的话就获取模板，不存在模板的话就获取html元素的OuterHTML字符串
+  /** 
+   * 如果不存在render函数的话就模板然后通过模板字符串编译出render方法。
+   * 如果存在模板的话就判断模板是否是字符串，如果是就再判断是否是查询语句，如果是就获取查询的element元素的innerHTML内容，如果不是字符串的话就判断是否是个元素并获取他的innerHTML内容，既不是元素也不是字符串的话就直接报错并返回this
+   * 如果不存在模板的话就获取html元素的OuterHTML字符串
+   */
   if (!options.render) {
     let template = options.template
     if (template) {
@@ -62,14 +67,15 @@ Vue.prototype.$mount = function (
     } else if (el) {
       template = getOuterHTML(el)
     }
-    //这里还判断了一次是否有模板，所以当el为''或者options.template='#'时下面的代码就不会执行了，render函数也不会被挂载，将在后续阶段被赋值为一个生产空虚拟节点的一个方法
+    //这里还判断了一次是否有模板，所以当el为''或者options.template='#'时下面的代码就不会执行了，render函数也不会被挂载，将在后续阶段被赋值为一个产生空虚拟节点的一个方法
     if (template) {
       /* istanbul ignore if */
       if (process.env.NODE_ENV !== 'production' && config.performance && mark) {
         mark('compile')
       }
 
-      //生产render函数
+      /** !! 重点 */
+      /** 生成render函数，通过编译器变异template生成render方法，这里就是编译的入口 */
       const { render, staticRenderFns } = compileToFunctions(template, {
         outputSourceRange: process.env.NODE_ENV !== 'production',
         shouldDecodeNewlines,
@@ -77,6 +83,7 @@ Vue.prototype.$mount = function (
         delimiters: options.delimiters,
         comments: options.comments
       }, this)
+
       //对render函数进行挂载
       options.render = render
       options.staticRenderFns = staticRenderFns

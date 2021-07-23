@@ -139,6 +139,7 @@ export function observe(value: any, asRootData: ?boolean): Observer | void {
 
 /**
  * Define a reactive property on an Object.
+ * 这里要注意只是给某个属性加上监听，因为Object.defineProperty的限制，它没法像proxy那样代理，所以没有事先声明就直接对新属性赋值是没有监听的。
  */
 export function defineReactive(
   obj: Object,

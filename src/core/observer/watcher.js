@@ -81,6 +81,7 @@ export default class Watcher {
       ? expOrFn.toString()
       : ''
     // parse expression for getter
+    //解析 expOrFn 成一个getter方法
     if (typeof expOrFn === 'function') {
       this.getter = expOrFn
     } else {
@@ -102,13 +103,15 @@ export default class Watcher {
 
   /**
    * Evaluate the getter, and re-collect dependencies.
+   * 评估getter，并重新收集依赖项
    */
   get() {
-    //这里每次都要重新收集依赖，主要是依赖是会动他变化的。
+    //这里每次都要重新收集依赖，主要是因为依赖是会动态变化的。
     pushTarget(this)
     let value
     const vm = this.vm
     try {
+      //调用getter获取值，注意这里是调用获取返回值，所以是动态的，而且对应的方法也会被执行
       value = this.getter.call(vm, vm)
     } catch (e) {
       if (this.user) {
@@ -131,6 +134,7 @@ export default class Watcher {
 
   /**
    * Add a dependency to this directive.
+   * 调用dep的添加sub方法，实现双向添加
    */
   addDep(dep: Dep) {
     const id = dep.id
@@ -174,8 +178,10 @@ export default class Watcher {
     if (this.lazy) {
       this.dirty = true
     } else if (this.sync) {
+      //直接执行
       this.run()
     } else {
+      //在队列中执行，通过添加顺序来执行
       queueWatcher(this)
     }
   }
@@ -183,6 +189,8 @@ export default class Watcher {
   /**
    * Scheduler job interface.
    * Will be called by the scheduler.
+   * 调度器的工作界面。
+   * 将被调度程序调用。
    */
   run() {
     if (this.active) {

@@ -58,6 +58,7 @@ export function initLifecycle(vm: Component) {
 
 /** 生命周期混入 */
 export function lifecycleMixin(Vue: Class<Component>) {
+  /** 挂载_update方法，更新视图，通过对比虚拟node的改动来更改视图 */
   Vue.prototype._update = function (vnode: VNode, hydrating?: boolean) {
     const vm: Component = this
     const prevEl = vm.$el
@@ -172,6 +173,10 @@ export function mountComponent(
   }
   callHook(vm, 'beforeMount')
 
+  /** 
+   * 更新模板的方法，实际上是对_update方法的报装
+   * 通过调用_reder方法生成虚拟node然后通过对比虚拟node更新视图
+   */
   let updateComponent
   /* istanbul ignore if */
   if (process.env.NODE_ENV !== 'production' && config.performance && mark) {
@@ -200,7 +205,7 @@ export function mountComponent(
   // we set this to vm._watcher inside the watcher's constructor
   // since the watcher's initial patch may call $forceUpdate (e.g. inside child
   // component's mounted hook), which relies on vm._watcher being already defined
-  //创建watcher
+  //创建watcher，对updateComponent方法产生产生的依赖进行监听（主要是由_render方法产生的）
   new Watcher(vm, updateComponent, noop, {
     before() {
       if (vm._isMounted && !vm._isDestroyed) {

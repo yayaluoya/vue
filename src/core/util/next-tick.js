@@ -10,10 +10,11 @@ export let isUsingMicroTask = false
 const callbacks = []
 let pending = false
 
-function flushCallbacks () {
+/** 执行所有注册的任务 */
+function flushCallbacks() {
   pending = false
   const copies = callbacks.slice(0)
-  callbacks.length = 0
+  callbacks.length = 0//情况任务列表
   for (let i = 0; i < copies.length; i++) {
     copies[i]()
   }
@@ -30,6 +31,7 @@ function flushCallbacks () {
 // where microtasks have too high a priority and fire in between supposedly
 // sequential events (e.g. #4521, #6690, which have workarounds)
 // or even between bubbling of the same event (#6566).
+/** 微任务执行器，在微任务中执行flushCallbacks方法 */
 let timerFunc
 
 // The nextTick behavior leverages the microtask queue, which can be accessed
@@ -39,6 +41,10 @@ let timerFunc
 // completely stops working after triggering a few times... so, if native
 // Promise is available, we will use it:
 /* istanbul ignore next, $flow-disable-line */
+/**
+ * 创建兼容性强的微任务执行器，并赋值给timerFunc
+ */
+/** 优先用promise来实现 */
 if (typeof Promise !== 'undefined' && isNative(Promise)) {
   const p = Promise.resolve()
   timerFunc = () => {
@@ -51,7 +57,9 @@ if (typeof Promise !== 'undefined' && isNative(Promise)) {
     if (isIOS) setTimeout(noop)
   }
   isUsingMicroTask = true
-} else if (!isIE && typeof MutationObserver !== 'undefined' && (
+}
+/** 其次用MutationObserver来实现，MutationObserver会在观察的元素发生更改时在微任务中执行注册的方法 */
+else if (!isIE && typeof MutationObserver !== 'undefined' && (
   isNative(MutationObserver) ||
   // PhantomJS and iOS 7.x
   MutationObserver.toString() === '[object MutationObserverConstructor]'
@@ -70,38 +78,57 @@ if (typeof Promise !== 'undefined' && isNative(Promise)) {
     textNode.data = String(counter)
   }
   isUsingMicroTask = true
-} else if (typeof setImmediate !== 'undefined' && isNative(setImmediate)) {
+}
+/** 
+ * 再用setImmediate来实现，该方法用来把一些需要长时间运行的操作放在一个回调函数里，在浏览器完成后面的其他语句后，就立刻执行这个回调函数 
+ * 注意这个方法不是标准的方法，尽量不要使用
+ */
+else if (typeof setImmediate !== 'undefined' && isNative(setImmediate)) {
   // Fallback to setImmediate.
   // Technically it leverages the (macro) task queue,
   // but it is still a better choice than setTimeout.
   timerFunc = () => {
     setImmediate(flushCallbacks)
   }
-} else {
+}
+/** 最后用setTimeout方法来实现，这个方法是性能最差的，而且它添加的是个宏任务 */
+else {
   // Fallback to setTimeout.
   timerFunc = () => {
     setTimeout(flushCallbacks, 0)
   }
 }
 
-export function nextTick (cb?: Function, ctx?: Object) {
+/**
+ * 在下一个任务微任务中添加一个任务
+ * @param {*} cb 执行方法
+ * @param {*} ctx 执行域
+ */
+export function nextTick(cb?: Function, ctx?: Object) {
+  //推入任务到执行队列中
   let _resolve
   callbacks.push(() => {
+    //如果有回调函数就包装下，捕获异常
     if (cb) {
       try {
         cb.call(ctx)
       } catch (e) {
         handleError(e, ctx, 'nextTick')
       }
-    } else if (_resolve) {
+    }
+    //如果没有回调函数就解决返回的promice
+    else if (_resolve) {
       _resolve(ctx)
     }
   })
+  //先判断下是否已经在执行执行任务了，若果在执行就不调用了，保证一次宏任务只执行一次
   if (!pending) {
     pending = true
+    //执行执行队列中的任务
     timerFunc()
   }
   // $flow-disable-line
+  //如果没有传入回调方法，且有Promise则返回一个promise实例，在回调被执行时解决
   if (!cb && typeof Promise !== 'undefined') {
     return new Promise(resolve => {
       _resolve = resolve
